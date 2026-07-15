@@ -1,0 +1,530 @@
+{
+  "name": "WhatsApp Multi-Modal AI Assistant (Real Estate Example)",
+  "nodes": [
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=User name: {{ $('Webhook1').item.json.body.customData.contact_first_name }}\nUser timezone: {{ $('Webhook1').item.json.body.customData.contact_timezone }}\nCurrent UTC hour: {{ $now.setZone('UTC').hour }}\nMessage: {{ $json.output || $json.input || $json.text || $json.content || 'Hello' }}",
+        "options": {
+          "systemMessage": "You are a WhatsApp assistant for {{YOUR_BUSINESS_NAME}}.\n\nThe user's name, timezone, UTC hour, and message are provided in the input above.\nCalculate local hour: UTC hour + timezone offset (e.g. +06 means add 6).\nIf result > 23, subtract 24. If result < 0, add 24.\n\nGREETING based on local hour:\n- 5-11 = Good morning\n- 12-16 = Good afternoon\n- 17-20 = Good evening\n- 21-4 = Hello\n\nOVERRIDE RULE (HIGHEST PRIORITY):\nIf message contains greeting (Hi/Hello/Hey/Salam/Assalamu Alaikum) OR intent is Greeting:\nIGNORE any Off-topic: Yes flag. ALWAYS use GREETING format.\n\nREPEAT DETECTION:\nIf same message appears 3+ times: reply I see you have sent this a few times. Is there something specific I can help with? Reply BOOK!\n\nRESPONSE FORMATS:\n\nGREETING (Hi/Hello/Hey/Salam):\n[Greeting] [actual name]! Welcome to {{YOUR_BUSINESS_NAME}}. How can I help you find your dream property today? Thanks for reaching out!\n\nREAL ESTATE QUERY:\n[Greeting] [actual name]! [One short sentence from Pinecone database] [CTA: Reply BOOK / CALL / YES] Thank you, [actual name]!\n\nOFF-TOPIC (weather/food/jokes ONLY):\nHi [actual name]! We specialize in {{YOUR_BUSINESS_NAME}} properties. Any real estate questions? Reply BOOK for free consultation! Thanks\n\nSTRICT RULES:\n- Use the ACTUAL name from input (NEVER write {{ }} or brackets or [actual name] literally)\n- Max 3-4 sentences\n- End with Thanks or Thank you\n- Max 2 emojis\n- Use Pinecone tool for property/agent/pricing queries only\n- If not in database: Let me connect you with an agent! Reply CALL\n- NEVER output {{ }} or any template syntax\n- Match language (Bengali/English)"
+        }
+      },
+      "id": "8be1e047-8c95-48af-ada5-fe650ae54fd2",
+      "name": "Knowledge Base Agent1",
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "position": [7120, 2896],
+      "typeVersion": 1.9
+    },
+    {
+      "parameters": {
+        "model": { "__rl": true, "mode": "list", "value": "gpt-4o-mini" },
+        "options": {}
+      },
+      "id": "c9d2870c-fe11-47a1-898e-099d34350e2a",
+      "name": "OpenAI Chat Model1",
+      "type": "@n8n/n8n-nodes-langchain.lmChatOpenAi",
+      "position": [2864, 3888],
+      "typeVersion": 1.2,
+      "credentials": {
+        "openAiApi": { "id": "YOUR_OPENAI_CREDENTIAL_ID", "name": "YOUR_OPENAI_CREDENTIAL_NAME" }
+      }
+    },
+    {
+      "parameters": {
+        "sessionIdType": "customKey",
+        "sessionKey": "=={{ $('Webhook1').item.json.body.customData.contact_id }}_v2"
+      },
+      "id": "12742cfa-077f-4883-8a52-86d08e45e7c6",
+      "name": "Simple Memory1",
+      "type": "@n8n/n8n-nodes-langchain.memoryBufferWindow",
+      "position": [3376, 3792],
+      "typeVersion": 1.3
+    },
+    {
+      "parameters": { "resource": "audio", "operation": "translate", "options": {} },
+      "id": "bb95faa5-e9cc-4a9c-8dde-12bbe3159dd0",
+      "name": "OpenAI2",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "position": [4400, 2048],
+      "typeVersion": 1.8,
+      "credentials": {
+        "openAiApi": { "id": "YOUR_OPENAI_CREDENTIAL_ID", "name": "YOUR_OPENAI_CREDENTIAL_NAME" }
+      }
+    },
+    {
+      "parameters": {
+        "resource": "image",
+        "operation": "analyze",
+        "modelId": { "__rl": true, "mode": "list", "value": "gpt-4o-mini", "cachedResultName": "GPT-4O-MINI" },
+        "inputType": "base64",
+        "options": { "detail": "auto" }
+      },
+      "id": "c7eaa411-d8d1-4398-998d-c3ae19cafc82",
+      "name": "OpenAI3",
+      "type": "@n8n/n8n-nodes-langchain.openAi",
+      "position": [4160, 2336],
+      "typeVersion": 1.8,
+      "credentials": {
+        "openAiApi": { "id": "YOUR_OPENAI_CREDENTIAL_ID", "name": "YOUR_OPENAI_CREDENTIAL_NAME" }
+      }
+    },
+    {
+      "parameters": { "operation": "pdf", "options": {} },
+      "id": "de259464-d3df-4f61-a62c-fccd95962e1e",
+      "name": "Extract from PDF1",
+      "type": "n8n-nodes-base.extractFromFile",
+      "position": [3712, 2752],
+      "typeVersion": 1
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "da68bcca-a2a6-4676-8649-6fb1b664e44c", "name": "text", "type": "string", "value": "={{ $json.text }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "180f07a7-2aa8-4a6e-8d83-2a64c5347270",
+      "name": "Map document prompt1",
+      "type": "n8n-nodes-base.set",
+      "position": [4176, 2560],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "48af2dcc-4ce9-45fc-abfc-54f803930092", "name": "text", "type": "string", "value": "={{ $json.content }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "bd6167fe-e163-4581-a03f-200e1d173051",
+      "name": "Map image prompt1",
+      "type": "n8n-nodes-base.set",
+      "position": [4416, 2256],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "assignments": {
+          "assignments": [
+            { "id": "38aec976-a32c-4b0e-85f4-c90adc16abc9", "name": "text", "type": "string", "value": "={{ $('Webhook1').item.json.body.DMBody }}" }
+          ]
+        },
+        "options": {}
+      },
+      "id": "4c897533-f6c4-4b52-9a98-96c91f0f4a78",
+      "name": "Map text prompt1",
+      "type": "n8n-nodes-base.set",
+      "position": [4128, 2064],
+      "typeVersion": 3.4
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.body.customData.attachments }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": {}
+      },
+      "id": "ab00d502-d483-422d-bdb6-31873e74d5cc",
+      "name": "Download Voicemail1",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [3904, 2208],
+      "typeVersion": 4.2,
+      "credentials": {
+        "httpHeaderAuth": { "id": "YOUR_HEADER_AUTH_CREDENTIAL_ID", "name": "YOUR_HEADER_AUTH_CREDENTIAL_NAME" }
+      }
+    },
+    {
+      "parameters": { "url": "={{ $json.body.customData.attachments }}", "options": {} },
+      "id": "d1656a9a-8898-48d6-a6df-851c07988be5",
+      "name": "Download Image1",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [3648, 2496],
+      "typeVersion": 4.2
+    },
+    {
+      "parameters": {
+        "url": "={{ $json.body.customData.attachments }}",
+        "authentication": "genericCredentialType",
+        "genericAuthType": "httpHeaderAuth",
+        "options": { "response": { "response": {} } }
+      },
+      "id": "56a13f79-8e21-4a0d-9fe2-160d8ee090d5",
+      "name": "Download Document1",
+      "type": "n8n-nodes-base.httpRequest",
+      "position": [2912, 3152],
+      "typeVersion": 4.2,
+      "credentials": {
+        "httpHeaderAuth": { "id": "YOUR_HEADER_AUTH_CREDENTIAL_ID", "name": "YOUR_HEADER_AUTH_CREDENTIAL_NAME" }
+      }
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose", "version": 2 },
+                "conditions": [
+                  { "id": "2fc5c912-629b-4cbe-b5e3-7e3f0651c628", "operator": { "type": "string", "operation": "notContains" }, "leftValue": "={{ $json.body.customData.attachments }}", "rightValue": "." }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Text"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose", "version": 2 },
+                "conditions": [
+                  { "id": "3e7a07f9-b785-450c-8c68-f6b276838503", "operator": { "type": "string", "operation": "contains" }, "leftValue": "={{ $json.body.customData.attachments }}", "rightValue": ".pdf" }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "Document"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose", "version": 2 },
+                "conditions": [
+                  { "id": "26a3d85c-0815-48ff-85ce-713129a1107c", "operator": { "type": "string", "operation": "contains" }, "leftValue": "={{ $json.body.customData.attachments }}", "rightValue": ".ogg" },
+                  { "id": "audio-mp4-check", "operator": { "type": "string", "operation": "contains" }, "leftValue": "={{ $json.body.customData.attachments }}", "rightValue": ".mp4" },
+                  { "id": "audio-opus-check", "operator": { "type": "string", "operation": "contains" }, "leftValue": "={{ $json.body.customData.attachments }}", "rightValue": ".opus" },
+                  { "id": "audio-m4a-check", "operator": { "type": "string", "operation": "contains" }, "leftValue": "={{ $json.body.customData.attachments }}", "rightValue": ".m4a" }
+                ],
+                "combinator": "or"
+              },
+              "renameOutput": true,
+              "outputKey": "Audio"
+            },
+            {
+              "conditions": {
+                "options": { "caseSensitive": false, "leftValue": "", "typeValidation": "loose", "version": 2 },
+                "conditions": [
+                  { "id": "840b95b8-6559-4fb7-b32c-651451d6d0d2", "operator": { "type": "string", "operation": "contains" }, "leftValue": "={{ $json.body.customData.attachments }}", "rightValue": ".jpeg" },
+                  { "id": "image-jpg-check", "operator": { "type": "string", "operation": "contains" }, "leftValue": "={{ $json.body.customData.attachments }}", "rightValue": ".jpg" },
+                  { "id": "image-png-check", "operator": { "type": "string", "operation": "contains" }, "leftValue": "={{ $json.body.customData.attachments }}", "rightValue": ".png" },
+                  { "id": "image-webp-check", "operator": { "type": "string", "operation": "contains" }, "leftValue": "={{ $json.body.customData.attachments }}", "rightValue": ".webp" }
+                ],
+                "combinator": "or"
+              },
+              "renameOutput": true,
+              "outputKey": "Image"
+            }
+          ]
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "id": "4963b81b-60e7-4131-8d0d-29e889a3fc2b",
+      "name": "Route Types1",
+      "type": "n8n-nodes-base.switch",
+      "position": [1920, 3408],
+      "typeVersion": 3.2
+    },
+    {
+      "parameters": {
+        "rules": {
+          "values": [
+            {
+              "conditions": {
+                "options": { "caseSensitive": true, "leftValue": "", "typeValidation": "strict", "version": 2 },
+                "conditions": [
+                  { "id": "88b618fd-9a88-491e-91dd-c5fc9efa36e3", "operator": { "type": "string", "operation": "contains" }, "leftValue": "={{ $json.body.customData.attachments }}", "rightValue": ".pdf" }
+                ],
+                "combinator": "and"
+              },
+              "renameOutput": true,
+              "outputKey": "PDF"
+            }
+          ]
+        },
+        "options": {}
+      },
+      "id": "909b66a4-abc8-48db-8708-70f3e6b253f4",
+      "name": "Route Document Types1",
+      "type": "n8n-nodes-base.switch",
+      "position": [3344, 2944],
+      "typeVersion": 3.2
+    },
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "YOUR_WEBHOOK_PATH",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2.1,
+      "position": [1616, 3440],
+      "id": "a2f8fe8b-339f-432e-810c-2b63f1863632",
+      "name": "Webhook1",
+      "webhookId": "YOUR_WEBHOOK_ID"
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "YOUR_CRM_WEBHOOK_URL",
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={\n  \"contact_id\": \"{{ $('Webhook1').item.json.body.customData.contact_id }}\",\n  \"phone\": \"{{ $('Webhook1').item.json.body.phone }}\",\n  \"message\": \"{{ ($json.output || $json.text || $json.content || 'Hello! How can I help you today?').replace(/\\n/g, ' ').replace(/\"/g, '\\\\\"') }}\"\n}",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [7808, 3152],
+      "id": "953c515d-eedd-4b53-b89e-e7f3ab094712",
+      "name": "HTTP Request1"
+    },
+    {
+      "parameters": {
+        "pollTimes": { "item": [{ "mode": "everyMinute" }] },
+        "triggerOn": "specificFolder",
+        "folderToWatch": {
+          "__rl": true,
+          "value": "YOUR_GOOGLE_DRIVE_FOLDER_ID",
+          "mode": "list",
+          "cachedResultName": "YOUR_FOLDER_NAME",
+          "cachedResultUrl": "https://drive.google.com/drive/folders/YOUR_GOOGLE_DRIVE_FOLDER_ID"
+        },
+        "event": "fileCreated",
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDriveTrigger",
+      "typeVersion": 1,
+      "position": [1584, 3216],
+      "id": "7c14dfe2-0c98-4551-b61b-37ab304e9720",
+      "name": "Google Drive Trigger1",
+      "credentials": {
+        "googleDriveOAuth2Api": { "id": "YOUR_GOOGLE_DRIVE_CREDENTIAL_ID", "name": "YOUR_GOOGLE_DRIVE_CREDENTIAL_NAME" }
+      }
+    },
+    {
+      "parameters": {
+        "operation": "download",
+        "fileId": { "__rl": true, "value": "={{ $json.id }}", "mode": "id" },
+        "options": {}
+      },
+      "type": "n8n-nodes-base.googleDrive",
+      "typeVersion": 3,
+      "position": [3936, 2016],
+      "id": "a480cba8-838f-45ca-b168-82ab0cc92d50",
+      "name": "Download file1",
+      "credentials": {
+        "googleDriveOAuth2Api": { "id": "YOUR_GOOGLE_DRIVE_CREDENTIAL_ID", "name": "YOUR_GOOGLE_DRIVE_CREDENTIAL_NAME" }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "insert",
+        "pineconeIndex": { "__rl": true, "value": "YOUR_PINECONE_INDEX", "mode": "list", "cachedResultName": "YOUR_PINECONE_INDEX" },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "position": [5408, 2416],
+      "id": "3d9f987e-99ad-4f58-a2d3-07c7f2ca244e",
+      "name": "Pinecone Vector Store2",
+      "credentials": {
+        "pineconeApi": { "id": "YOUR_PINECONE_CREDENTIAL_ID", "name": "YOUR_PINECONE_CREDENTIAL_NAME" }
+      }
+    },
+    {
+      "parameters": { "dataType": "binary", "options": {} },
+      "type": "@n8n/n8n-nodes-langchain.documentDefaultDataLoader",
+      "typeVersion": 1.1,
+      "position": [3152, 3856],
+      "id": "21fa1682-2b25-4a65-b009-5f3bcedc0449",
+      "name": "Default Data Loader1"
+    },
+    {
+      "parameters": { "options": {} },
+      "type": "@n8n/n8n-nodes-langchain.embeddingsOpenAi",
+      "typeVersion": 1.2,
+      "position": [2640, 3904],
+      "id": "6e9b5bd6-4f7a-49e8-a4f2-393096e0e78d",
+      "name": "Embeddings OpenAI",
+      "credentials": {
+        "openAiApi": { "id": "YOUR_OPENAI_CREDENTIAL_ID", "name": "YOUR_OPENAI_CREDENTIAL_NAME" }
+      }
+    },
+    {
+      "parameters": {
+        "mode": "retrieve-as-tool",
+        "toolDescription": "You are an expert AI assistant for {{YOUR_BUSINESS_NAME}}. Use this Pinecone vector store to retrieve accurate and detailed information from the business's knowledge base — company profile, featured listings/products, agent/staff directory with contact information, and services offered. Query this tool whenever the user asks for pricing, staff details, or general business information to ensure your responses are factually grounded in the provided dataset",
+        "pineconeIndex": { "__rl": true, "value": "YOUR_PINECONE_INDEX", "mode": "list", "cachedResultName": "YOUR_PINECONE_INDEX" },
+        "options": {}
+      },
+      "type": "@n8n/n8n-nodes-langchain.vectorStorePinecone",
+      "typeVersion": 1.3,
+      "position": [3408, 3216],
+      "id": "6ef40916-5533-4348-b2ef-d43c2d04bd9a",
+      "name": "Pinecone Vector Store3",
+      "credentials": {
+        "pineconeApi": { "id": "YOUR_PINECONE_CREDENTIAL_ID", "name": "YOUR_PINECONE_CREDENTIAL_NAME" }
+      }
+    },
+    {
+      "parameters": { "jsCode": "return {\n  input: $node[\"Map document prompt1\"].json.text\n};" },
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [4480, 2496],
+      "id": "afcdad8e-fc0a-406f-a98d-1c0818dac3c6",
+      "name": "Code in JavaScript1"
+    },
+    {
+      "parameters": { "url": "={{ $json.body.customData.attachments }}", "options": {} },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [3600, 2304],
+      "id": "df5a1171-b799-4b9f-a7db-e1e16ad8f1c5",
+      "name": "VOICE1"
+    },
+    {
+      "parameters": { "url": "={{ $json.body.customData.attachments }}", "options": {} },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [3248, 2672],
+      "id": "9b5c4043-eaf8-4207-8578-8c99eb03f754",
+      "name": "IMAGE2"
+    },
+    {
+      "parameters": { "url": "={{ $json.body.customData.attachments }}", "options": {} },
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.4,
+      "position": [2704, 3296],
+      "id": "f49acff1-2f85-4035-bac3-736141bd6447",
+      "name": "PDF2"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=={{ $json.text }}",
+        "options": {
+          "systemMessage": "You are a voice message analyzer for {{YOUR_BUSINESS_NAME}}.\n\nGREETING RULE (HIGHEST PRIORITY):\nIf voice content is a greeting (Hi, Hello, Hey, Salam, Assalamu Alaikum) = NEVER off-topic. Always set Off-topic: No.\n\nVOICE INTENT CATEGORIES:\n- Greeting/casual -> Off-topic: No\n- Product/service inquiry -> use Pinecone tool\n- Pricing question -> use Pinecone tool\n- Staff/agent search -> use Pinecone tool\n- Booking/appointment -> Off-topic: No\n- General business question -> use Pinecone tool\n- Off-topic (weather/food/jokes ONLY) -> Off-topic: Yes\n\nCRITICAL RULES:\n- NEVER make up information\n- ALWAYS use Pinecone tool for product/staff/pricing queries\n- If data not in database, say not available in our database\n\nOutput format (NO greeting, NO name, NO emojis):\n- Voice content: [brief summary]\n- User intent: [category]\n- Answer from database: [info OR not in database OR greeting - no query needed]\n- Business related: [Yes/No]\n- Off-topic: [Yes/No]\n- Detected language: [Bengali/English]\n\nMax 60 words. Final formatter handles tone."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [6864, 2736],
+      "id": "93f184c6-fb07-439e-94ab-fff89a344093",
+      "name": "voice1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=={{ $json.text }}",
+        "options": {
+          "systemMessage": "You are an image analyzer for {{YOUR_BUSINESS_NAME}}.\n\nGREETING RULE (HIGHEST PRIORITY):\nIf image contains text like Hi, Hello, Hey, Salam = NEVER off-topic. Set Off-topic: No.\n\nANALYSIS STEPS:\n1. Identify image content in 1 sentence\n2. Check if relevant to the business (products, listings, floor plans, interiors)\n3. If relevant: use Pinecone tool to cross-check\n4. If not relevant: mark Off-topic: Yes\n\nRULES:\n- NEVER invent details\n- ONLY use verified data from Pinecone tool\n\nOutput format (NO greeting, NO name, NO emojis):\n- Image shows: [brief description]\n- Business related: [Yes/No]\n- Off-topic: [Yes/No]\n- Key observations: [2-3 points from database if relevant]\n- Database match: [Yes/No]\n\nMax 60 words. Final formatter handles tone."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [5888, 2560],
+      "id": "00bb2f99-7b64-414d-8fb6-91d9c7c261c5",
+      "name": "IMAGE3"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "=={{ $json.text }}",
+        "options": {
+          "systemMessage": "You are a text message analyzer for {{YOUR_BUSINESS_NAME}}.\n\nGREETING RULE (HIGHEST PRIORITY):\nGreetings like Hi, Hello, Hey, Salam, Assalamu Alaikum = NEVER off-topic. Always set Off-topic: No for greetings.\n\nINTENT CATEGORIES:\n- Greeting -> Off-topic: No\n- Product/service inquiry -> use Pinecone tool\n- Pricing question -> use Pinecone tool\n- Staff/agent search -> use Pinecone tool\n- Booking/appointment -> Off-topic: No\n- General business question -> use Pinecone tool\n- Off-topic (weather/food/jokes ONLY) -> Off-topic: Yes\n\nRULES:\n- NEVER invent information\n- Use Pinecone tool for product/staff/pricing queries only\n- If not in database: not available in our database\n\nOutput format (NO greeting, NO name, NO emojis):\n- User intent: [category]\n- User question: [brief summary]\n- Answer from database: [info OR not in database OR greeting - no query needed]\n- Business related: [Yes/No]\n- Off-topic: [Yes/No]\n- Detected language: [Bengali/English]\n\nMax 60 words. Final formatter handles tone."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [6528, 2640],
+      "id": "15d48b45-bd14-4efb-ab7a-69195255cc35",
+      "name": "text1"
+    },
+    {
+      "parameters": {
+        "promptType": "define",
+        "text": "={{ $json.input }}",
+        "options": {
+          "systemMessage": "You are a PDF analyzer for {{YOUR_BUSINESS_NAME}}.\n\nRULES:\n- NEVER make up information\n- ONLY use verified data from Pinecone tool\n- If not in database: information not available in our database\n\nANALYSIS STEPS:\n1. Read PDF content\n2. Identify if relevant to the business\n3. Extract key info\n4. Cross-check with Pinecone tool\n\nOutput format (NO greeting, NO name, NO emojis):\n- Document type: [listing/contract/brochure/other]\n- Key information: [name, price, location, details if found]\n- Business related: [Yes/No]\n- Off-topic: [Yes/No]\n- Database match: [Yes/No]\n\nMax 60 words. Final formatter handles tone."
+        }
+      },
+      "type": "@n8n/n8n-nodes-langchain.agent",
+      "typeVersion": 3.1,
+      "position": [6176, 2560],
+      "id": "38e2eb83-0a7a-4cd5-81c0-bc94df3414f1",
+      "name": "PDF3"
+    }
+  ],
+  "connections": {
+    "Knowledge Base Agent1": { "main": [[{ "node": "HTTP Request1", "type": "main", "index": 0 }]] },
+    "OpenAI Chat Model1": {
+      "ai_languageModel": [[
+        { "node": "Knowledge Base Agent1", "type": "ai_languageModel", "index": 0 },
+        { "node": "voice1", "type": "ai_languageModel", "index": 0 },
+        { "node": "IMAGE3", "type": "ai_languageModel", "index": 0 },
+        { "node": "text1", "type": "ai_languageModel", "index": 0 },
+        { "node": "PDF3", "type": "ai_languageModel", "index": 0 }
+      ]]
+    },
+    "Simple Memory1": {
+      "ai_memory": [[
+        { "node": "Knowledge Base Agent1", "type": "ai_memory", "index": 0 },
+        { "node": "voice1", "type": "ai_memory", "index": 0 },
+        { "node": "IMAGE3", "type": "ai_memory", "index": 0 },
+        { "node": "text1", "type": "ai_memory", "index": 0 },
+        { "node": "PDF3", "type": "ai_memory", "index": 0 }
+      ]]
+    },
+    "OpenAI2": { "main": [[{ "node": "voice1", "type": "main", "index": 0 }]] },
+    "OpenAI3": { "main": [[{ "node": "Map image prompt1", "type": "main", "index": 0 }]] },
+    "Extract from PDF1": { "main": [[{ "node": "Map document prompt1", "type": "main", "index": 0 }]] },
+    "Map document prompt1": { "main": [[{ "node": "Code in JavaScript1", "type": "main", "index": 0 }]] },
+    "Map image prompt1": { "main": [[{ "node": "IMAGE3", "type": "main", "index": 0 }]] },
+    "Map text prompt1": { "main": [[{ "node": "text1", "type": "main", "index": 0 }]] },
+    "Download Voicemail1": { "main": [[{ "node": "OpenAI2", "type": "main", "index": 0 }]] },
+    "Download Image1": { "main": [[{ "node": "OpenAI3", "type": "main", "index": 0 }]] },
+    "Download Document1": { "main": [[{ "node": "Route Document Types1", "type": "main", "index": 0 }]] },
+    "Route Types1": {
+      "main": [
+        [{ "node": "Map text prompt1", "type": "main", "index": 0 }],
+        [{ "node": "PDF2", "type": "main", "index": 0 }],
+        [{ "node": "VOICE1", "type": "main", "index": 0 }],
+        [{ "node": "IMAGE2", "type": "main", "index": 0 }]
+      ]
+    },
+    "Route Document Types1": { "main": [[{ "node": "Extract from PDF1", "type": "main", "index": 0 }]] },
+    "Webhook1": { "main": [[{ "node": "Route Types1", "type": "main", "index": 0 }]] },
+    "Google Drive Trigger1": { "main": [[{ "node": "Download file1", "type": "main", "index": 0 }]] },
+    "Download file1": { "main": [[{ "node": "Pinecone Vector Store2", "type": "main", "index": 0 }]] },
+    "Default Data Loader1": { "ai_document": [[{ "node": "Pinecone Vector Store2", "type": "ai_document", "index": 0 }]] },
+    "Embeddings OpenAI": {
+      "ai_embedding": [[
+        { "node": "Pinecone Vector Store2", "type": "ai_embedding", "index": 0 },
+        { "node": "Pinecone Vector Store3", "type": "ai_embedding", "index": 0 }
+      ]]
+    },
+    "Pinecone Vector Store3": {
+      "ai_tool": [[
+        { "node": "Knowledge Base Agent1", "type": "ai_tool", "index": 0 },
+        { "node": "voice1", "type": "ai_tool", "index": 0 },
+        { "node": "IMAGE3", "type": "ai_tool", "index": 0 },
+        { "node": "text1", "type": "ai_tool", "index": 0 },
+        { "node": "PDF3", "type": "ai_tool", "index": 0 }
+      ]]
+    },
+    "Code in JavaScript1": { "main": [[{ "node": "PDF3", "type": "main", "index": 0 }]] },
+    "VOICE1": { "main": [[{ "node": "Download Voicemail1", "type": "main", "index": 0 }]] },
+    "IMAGE2": { "main": [[{ "node": "Download Image1", "type": "main", "index": 0 }]] },
+    "PDF2": { "main": [[{ "node": "Download Document1", "type": "main", "index": 0 }]] },
+    "voice1": { "main": [[{ "node": "Knowledge Base Agent1", "type": "main", "index": 0 }]] },
+    "IMAGE3": { "main": [[{ "node": "Knowledge Base Agent1", "type": "main", "index": 0 }]] },
+    "text1": { "main": [[{ "node": "Knowledge Base Agent1", "type": "main", "index": 0 }]] },
+    "PDF3": { "main": [[{ "node": "Knowledge Base Agent1", "type": "main", "index": 0 }]] }
+  },
+  "pinData": {},
+  "meta": {
+    "templateCredsSetupCompleted": true,
+    "instanceId": "YOUR_INSTANCE_ID"
+  }
+}
